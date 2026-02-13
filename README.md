@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Ultimate Excel AI Analyst (Enterprise SaaS Edition) 🚀
 
 A production-ready **Predictive Analytics Platform** featuring a **FastAPI** backend, **Streamlit** frontend, and **Docker** containerization.
@@ -49,3 +50,6 @@ docker-compose up --build
 -   Deploy the repository.
 -   Set Environment Variable: `API_URL=https://your-backend-url.com/api/v1`
 -   Command: `streamlit run ultimate_excel_ai/main.py`
+=======
+# ultimate_excel_ai
+>>>>>>> 43804eae5beb9717a9ec620c42c737c2823f26a9
