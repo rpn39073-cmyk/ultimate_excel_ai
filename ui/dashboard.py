@@ -80,23 +80,52 @@ def render_dashboard():
         
         # 1. Overview
         with tabs[0]:
-            st.header("Project Dashboard")
+            st.markdown("### 🚀 Project Overview")
+            
+            # Metric Cards
             col1, col2, col3, col4 = st.columns(4)
-            col1.metric("Rows", len(df))
-            col2.metric("Columns", len(df.columns))
-            col3.metric("Missing Filled", st.session_state['clean_stats'].get('missing_filled', 0))
-            col4.metric("Duplicates", st.session_state['clean_stats'].get('duplicates_removed', 0))
+            with col1:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <h3>Rows</h3>
+                    <h2>{len(df):,}</h2>
+                </div>
+                """, unsafe_allow_html=True)
+            with col2:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <h3>Columns</h3>
+                    <h2>{len(df.columns)}</h2>
+                </div>
+                """, unsafe_allow_html=True)
+            with col3:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <h3>Missing Filled</h3>
+                    <h2>{st.session_state['clean_stats'].get('missing_filled', 0)}</h2>
+                </div>
+                """, unsafe_allow_html=True)
+            with col4:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <h3>Duplicates</h3>
+                    <h2>{st.session_state['clean_stats'].get('duplicates_removed', 0)}</h2>
+                </div>
+                """, unsafe_allow_html=True)
+            
             st.divider()
             
-            st.subheader("Automated Visualizations")
+            st.markdown("### 📈 Automated Visualizations")
             suggestions = charts.suggest_charts(df, num_cols, cat_cols, date_cols)
             for i, conf in enumerate(suggestions[:4]):
                 if i % 2 == 0: c1, c2 = st.columns(2)
                 with (c1 if i % 2 == 0 else c2):
+                    st.markdown('<div class="metric-card" style="padding:1rem;">', unsafe_allow_html=True)
                     if conf['type'] == 'heatmap': st.plotly_chart(charts.generate_correlation_heatmap(df, num_cols), use_container_width=True)
                     elif conf['type'] == 'line': st.plotly_chart(charts.generate_line_chart(df, conf['x'], conf['y']), use_container_width=True)
                     elif conf['type'] == 'bar': st.plotly_chart(charts.generate_bar_chart(df, conf['x'], conf['y']), use_container_width=True)
                     elif conf['type'] == 'hist': st.plotly_chart(charts.generate_distribution_chart(df, conf['x']), use_container_width=True)
+                    st.markdown('</div>', unsafe_allow_html=True)
 
         # 2. Predictive Analytics
         with tabs[1]:
@@ -182,14 +211,19 @@ def render_dashboard():
 
         # 3. Smart Insights
         with tabs[2]:
-            st.header("Smart Insights")
+            st.markdown("### 💡 Smart Insights")
             if APP_MODE == 'LOCAL':
                 insights = analysis.generate_insights(df, num_cols, date_cols)
             else:
                 resp = api.analyze(filename)
                 insights = resp.get('insights', []) if "error" not in resp else [resp['error']]
-                
-            for i in insights: st.info(i)
+            
+            for i, insight in enumerate(insights):
+                st.markdown(f"""
+                <div class="metric-card" style="text-align: left; margin-bottom: 1rem;">
+                    <strong>Insight {i+1}:</strong> {insight}
+                </div>
+                """, unsafe_allow_html=True)
 
 
         # 4. Data Chat
