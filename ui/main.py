@@ -1,8 +1,9 @@
 import sys, os
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+# Add the project root to sys.path (3 levels up from ui/main.py: ui -> ultimate_excel_ai -> root)
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import streamlit as st
-from ui.dashboard import render_dashboard
+from ultimate_excel_ai.ui.dashboard import render_dashboard
 
 st.set_page_config(page_title="Ultimate Excel AI", page_icon="📊", layout="wide")
 
