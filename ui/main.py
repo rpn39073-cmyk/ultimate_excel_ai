@@ -65,6 +65,33 @@ st.markdown("""
     .js-plotly-plot .plotly .modebar {
         display: none !important; /* Hide Plotly controls for clean look */
     }
+
+    /* Professional 3D Download Button */
+    [data-testid="stDownloadButton"] > button {
+        background: linear-gradient(135deg, #00C9FF 0%, #92FE9D 100%);
+        color: white;
+        font-weight: 800;
+        font-size: 1.1rem;
+        padding: 0.8rem 2rem;
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 8px 15px rgba(0,0,0,0.1), inset 0 -4px 0 rgba(0,0,0,0.2);
+        transition: all 0.2s ease-in-out;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    [data-testid="stDownloadButton"] > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 20px rgba(0,0,0,0.15), inset 0 -4px 0 rgba(0,0,0,0.2);
+        background: linear-gradient(135deg, #00b8eb 0%, #83e88d 100%);
+        color: white;
+    }
+    
+    [data-testid="stDownloadButton"] > button:active {
+        transform: translateY(4px);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1), inset 0 -1px 0 rgba(0,0,0,0.2);
+    }
 </style>
 """, unsafe_allow_html=True)
 
