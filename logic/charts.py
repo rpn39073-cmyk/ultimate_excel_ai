@@ -66,6 +66,29 @@ def generate_donut_chart(df, cat_col, num_col, theme=None):
     fig.update_traces(textposition='inside', textinfo='percent+label')
     return update_layout(fig, f"{num_col} Composition by {cat_col}", theme)
 
+def generate_horizontal_bar_chart(df, cat_col, num_col, theme=None):
+    """Generates a horizontal bar chart."""
+    primary = theme["primary"] if theme else "#007BFF"
+    data = df.groupby(cat_col)[num_col].sum().reset_index().sort_values(num_col, ascending=True).tail(10) # Ascending for correct display order
+    fig = px.bar(data, y=cat_col, x=num_col, orientation='h', color_discrete_sequence=[primary])
+    fig.update_traces(marker_line_width=0, opacity=0.9)
+    return update_layout(fig, f"{num_col} by {cat_col}", theme)
+
+def generate_area_chart(df, date_col, num_col, theme=None):
+    """Generates a filled area chart."""
+    primary = theme["primary"] if theme else "#007BFF"
+    data = df.groupby(date_col)[num_col].sum().reset_index().sort_values(date_col)
+    fig = px.area(data, x=date_col, y=num_col)
+    fig.update_traces(line_color=primary, fillcolor=primary, opacity=0.3, line_width=3, mode='lines+markers')
+    return update_layout(fig, f"{num_col} Establishment over {date_col}", theme)
+
+def generate_funnel_chart(df, cat_col, num_col, theme=None):
+    """Generates a funnel chart."""
+    primary = theme["primary"] if theme else "#007BFF"
+    data = df.groupby(cat_col)[num_col].sum().reset_index().sort_values(num_col, ascending=False).head(5)
+    fig = px.funnel(data, x=num_col, y=cat_col, color_discrete_sequence=[primary])
+    return update_layout(fig, f"{cat_col} Funnel", theme)
+
 def suggest_charts(df, numeric_cols, categorical_cols, date_cols):
     """Returns a list of suggested chart configurations."""
     suggestions = []

@@ -107,46 +107,89 @@ def render_dashboard():
         # Tabs
         tabs = st.tabs(["📊 Dashboard", "🔮 Predictive Analytics", "💡 Smart Insights", "💬 Data Chat", "📥 Reports"])
         
-        # 1. Overview Dashboard (Power BI Style)
+        # 1. Overview Dashboard (Power BI Style Blinkit Layout)
         with tabs[0]:
-            # KPI Cards Row
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.markdown(f"""<div class="metric-card"><h3>Total Rows</h3><h2>{len(df):,}</h2></div>""", unsafe_allow_html=True)
-            with col2:
-                primary_metric = f"Sum of {num_cols[0]}" if num_cols else "Columns"
-                primary_val = f"{df[num_cols[0]].sum():,.2f}" if num_cols else str(len(df.columns))
-                st.markdown(f"""<div class="metric-card"><h3>{primary_metric}</h3><h2>{primary_val}</h2></div>""", unsafe_allow_html=True)
-            with col3:
-                sec_metric = f"Avg of {num_cols[0]}" if num_cols else "Missing Filled"
-                sec_val = f"{df[num_cols[0]].mean():,.2f}" if num_cols and not df.empty else str(st.session_state['clean_stats'].get('missing_filled', 0))
-                st.markdown(f"""<div class="metric-card"><h3>{sec_metric}</h3><h2>{sec_val}</h2></div>""", unsafe_allow_html=True)
-            with col4:
-                st.markdown(f"""<div class="metric-card"><h3>Categories</h3><h2>{len(cat_cols)}</h2></div>""", unsafe_allow_html=True)
+            # Main layout: Left (40%) and Right (60%)
+            col_left, col_right = st.columns([4, 6], gap="small")
             
-            st.write("") # Spacer
-            
-            # Interactive Chart Grid
-            if len(num_cols) > 0 and len(cat_cols) > 0:
-                c1, c2 = st.columns(2)
-                with c1:
-                    st.markdown('<div class="metric-card" style="padding:1rem;">', unsafe_allow_html=True)
-                    st.plotly_chart(charts.generate_bar_chart(df, cat_cols[0], num_cols[0], theme_dict), use_container_width=True)
-                    st.markdown('</div>', unsafe_allow_html=True)
-                with c2:
-                    st.markdown('<div class="metric-card" style="padding:1rem;">', unsafe_allow_html=True)
-                    # Use donut chart if unique values are small, otherwise correlation or distribution
-                    if len(df[cat_cols[0]].unique()) <= 15:
-                        st.plotly_chart(charts.generate_donut_chart(df, cat_cols[0], num_cols[0], theme_dict), use_container_width=True)
-                    elif len(num_cols) > 1:
-                        st.plotly_chart(charts.generate_correlation_heatmap(df, num_cols, theme_dict), use_container_width=True)
-                    else:
-                        st.plotly_chart(charts.generate_distribution_chart(df, num_cols[0], theme_dict), use_container_width=True)
+            with col_left:
+                # 4 KPIs in 2x2 grid
+                k1, k2 = st.columns(2)
+                with k1:
+                    primary_val = f"${df[num_cols[0]].sum():,.2f}" if num_cols else f"{len(df):,}"
+                    primary_label = f"TOTAL {num_cols[0]}" if num_cols else "TOTAL ROWS"
+                    st.markdown(f"""
+                    <div class="metric-card" style="background: linear-gradient(135deg, #FAD02C 0%, #FFFFFF 100%);">
+                        <h3>{primary_label}</h3>
+                        <h2>{primary_val}</h2>
+                    </div>""", unsafe_allow_html=True)
+                with k2:
+                    avg_val = f"${df[num_cols[0]].mean():,.2f}" if num_cols and not df.empty else "N/A"
+                    avg_label = f"AVG {num_cols[0]}" if num_cols else "AVG ROWS"
+                    st.markdown(f"""<div class="metric-card"><h3>{avg_label}</h3><h2>{avg_val}</h2></div>""", unsafe_allow_html=True)
+                
+                st.write("") # small gap
+                k3, k4 = st.columns(2)
+                with k3:
+                    st.markdown(f"""<div class="metric-card"><h3>NO OF ITEMS</h3><h2>{len(df):,}</h2></div>""", unsafe_allow_html=True)
+                with k4:
+                    sec_metric = f"AVG {num_cols[1]}" if len(num_cols) > 1 else "CATEGORIES"
+                    sec_val = f"{df[num_cols[1]].mean():.1f}" if len(num_cols) > 1 and not df.empty else str(len(cat_cols))
+                    st.markdown(f"""<div class="metric-card"><h3>{sec_metric}</h3><h2>{sec_val}</h2></div>""", unsafe_allow_html=True)
+                
+                st.markdown("<hr style='margin: 1rem 0; opacity: 0.2;'/>", unsafe_allow_html=True)
+                
+                # Bottom Left: Donut Chart and Horizontal Bar Chart
+                if len(cat_cols) > 0 and len(num_cols) > 0:
+                    cat1 = cat_cols[0]
+                    num1 = num_cols[0]
+                    st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+                    st.plotly_chart(charts.generate_donut_chart(df, cat1, num1, theme_dict), use_container_width=True)
                     st.markdown('</div>', unsafe_allow_html=True)
                     
-            if len(date_cols) > 0 and len(num_cols) > 0:
-                st.markdown('<div class="metric-card" style="padding:1rem; margin-top:1rem;">', unsafe_allow_html=True)
-                st.plotly_chart(charts.generate_line_chart(df, date_cols[0], num_cols[0], theme_dict), use_container_width=True)
+                    st.write("")
+                    
+                    cat2 = cat_cols[1] if len(cat_cols) > 1 else cat_cols[0]
+                    st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+                    st.plotly_chart(charts.generate_horizontal_bar_chart(df, cat2, num1, theme_dict), use_container_width=True)
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+            with col_right:
+                # Top Right: Wide Area Chart
+                if len(date_cols) > 0 and len(num_cols) > 0:
+                    st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+                    st.plotly_chart(charts.generate_area_chart(df, date_cols[0], num_cols[0], theme_dict), use_container_width=True)
+                    st.markdown('</div>', unsafe_allow_html=True)
+                elif len(num_cols) > 0 and len(cat_cols) > 0:
+                    st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+                    st.plotly_chart(charts.generate_line_chart(df, cat_cols[0], num_cols[0], theme_dict), use_container_width=True)
+                    st.markdown('</div>', unsafe_allow_html=True)
+                
+                st.write("")
+                
+                # Middle Right: Donut and Funnel
+                if len(cat_cols) > 2 and len(num_cols) > 0:
+                    r1, r2 = st.columns(2)
+                    with r1:
+                        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+                        st.plotly_chart(charts.generate_donut_chart(df, cat_cols[2], num_cols[0], theme_dict), use_container_width=True)
+                        st.markdown('</div>', unsafe_allow_html=True)
+                    with r2:
+                        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+                        st.plotly_chart(charts.generate_funnel_chart(df, cat_cols[2], num_cols[0], theme_dict), use_container_width=True)
+                        st.markdown('</div>', unsafe_allow_html=True)
+                
+                st.write("")
+                
+                # Bottom Right: Data Tutorials Table
+                st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+                st.markdown("<h3 style='text-align:center; opacity:0.5;'>DATA PREVIEW</h3>", unsafe_allow_html=True)
+                if not df.empty:
+                    # Style the dataframe with data bars for numeric columns
+                    styled_df = df.head(10).style
+                    for col in num_cols:
+                        styled_df = styled_df.bar(subset=[col], color=theme_dict['primary'])
+                    st.dataframe(styled_df, use_container_width=True, hide_index=True)
                 st.markdown('</div>', unsafe_allow_html=True)
 
         # 2. Predictive Analytics

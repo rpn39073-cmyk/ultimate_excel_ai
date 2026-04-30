@@ -7,15 +7,15 @@ from ultimate_excel_ai.ui.dashboard import render_dashboard
 
 st.set_page_config(page_title="Ultimate Excel AI", page_icon="📊", layout="wide", initial_sidebar_state="expanded")
 
-# Initialize default theme if not present
+# Initialize default theme if not present (Blinkit defaults)
 if 'theme_primary' not in st.session_state:
-    st.session_state['theme_primary'] = "#00D2FF" # Cyan/Blue glowing
+    st.session_state['theme_primary'] = "#FAD02C" # Blinkit Yellow
 if 'theme_bg' not in st.session_state:
-    st.session_state['theme_bg'] = "#0E1117" # Dark BG
+    st.session_state['theme_bg'] = "#F0F2F5" # Light Gray BG
 if 'theme_card_bg' not in st.session_state:
-    st.session_state['theme_card_bg'] = "#1E2127" # Slightly lighter dark
+    st.session_state['theme_card_bg'] = "#FFFFFF" # White cards
 if 'theme_text' not in st.session_state:
-    st.session_state['theme_text'] = "#FAFAFA"
+    st.session_state['theme_text'] = "#333333"
 
 # Custom Dynamic CSS
 st.markdown(f"""
@@ -24,13 +24,17 @@ st.markdown(f"""
     .stApp {{
         background-color: {st.session_state['theme_bg']};
         color: {st.session_state['theme_text']};
-        font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     }}
     
     /* Sidebar Styling */
     section[data-testid="stSidebar"] {{
-        background-color: {st.session_state['theme_card_bg']} !important;
-        border-right: 1px solid rgba(255,255,255,0.05);
+        background-color: {st.session_state['theme_primary']} !important;
+        border-right: none;
+    }}
+    
+    section[data-testid="stSidebar"] * {{
+        color: #333333 !important; /* Sidebar text always dark for yellow */
     }}
     
     /* Headers */
@@ -42,82 +46,81 @@ st.markdown(f"""
     .stButton>button {{
         width: 100%;
         background-color: {st.session_state['theme_primary']};
-        color: #fff !important;
-        border-radius: 8px;
+        color: #333 !important;
+        border-radius: 4px;
         border: none;
         padding: 0.5rem 1rem;
         font-weight: 600;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 12px {st.session_state['theme_primary']}40;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }}
     .stButton>button:hover {{
-        filter: brightness(1.1);
-        box-shadow: 0 6px 15px {st.session_state['theme_primary']}60;
-        color: #fff !important;
+        filter: brightness(0.95);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
     }}
     
     /* Cards (Custom Class for containers) */
     .metric-card {{
         background-color: {st.session_state['theme_card_bg']};
-        padding: 1.5rem;
-        border-radius: 12px;
-        box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-        text-align: center;
-        border: 1px solid rgba(255,255,255,0.05);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }}
-    .metric-card:hover {{
-        transform: translateY(-2px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-        border: 1px solid {st.session_state['theme_primary']}50;
+        padding: 1rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        text-align: left;
+        border: 1px solid rgba(0,0,0,0.05);
+        height: 100%;
     }}
     
     .metric-card h3 {{
-        font-size: 1rem;
+        font-size: 0.9rem;
         color: {st.session_state['theme_text']} !important;
-        opacity: 0.7;
-        margin-bottom: 0.5rem;
+        opacity: 0.8;
+        margin-bottom: 0.2rem;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        font-weight: 600;
     }}
     
     .metric-card h2 {{
-        font-size: 2rem;
-        color: {st.session_state['theme_primary']} !important;
+        font-size: 1.8rem;
+        color: {st.session_state['theme_text']} !important;
         margin: 0;
-        font-weight: 700;
-        text-shadow: 0 0 10px {st.session_state['theme_primary']}30;
+        font-weight: 800;
     }}
     
-    /* Adjust spacing */
+    /* Adjust spacing for Dense Power BI Look */
     .block-container {{
         padding-top: 1rem;
-        padding-bottom: 2rem;
+        padding-bottom: 1rem;
+        padding-left: 2rem;
+        padding-right: 2rem;
+        max-width: 100%;
+    }}
+    
+    div[data-testid="column"] {{
+        padding: 0 0.5rem; /* Reduce gap between columns */
     }}
     
     /* Plotly Chart Container */
     .js-plotly-plot .plotly .modebar {{
-        display: none !important; /* Hide Plotly controls for clean look */
+        display: none !important;
     }}
 
     /* Streamlit Tabs */
     .stTabs [data-baseweb="tab-list"] {{
-        gap: 24px;
+        gap: 10px;
         background-color: transparent;
     }}
     .stTabs [data-baseweb="tab"] {{
-        height: 50px;
-        white-space: pre-wrap;
+        height: 40px;
         background-color: transparent;
-        border-radius: 4px 4px 0px 0px;
-        gap: 1px;
-        padding-top: 10px;
-        padding-bottom: 10px;
+        padding: 5px 15px;
         color: {st.session_state['theme_text']};
+        font-weight: 600;
     }}
     .stTabs [aria-selected="true"] {{
-        color: {st.session_state['theme_primary']} !important;
-        border-bottom-color: {st.session_state['theme_primary']} !important;
+        color: #333333 !important;
+        background-color: {st.session_state['theme_primary']} !important;
+        border-radius: 4px;
+        border-bottom: none !important;
     }}
 
     /* Hide Top Padding/Header */
