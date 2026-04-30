@@ -15,7 +15,32 @@ if APP_MODE == 'SAAS':
 
 def render_dashboard():
     # Sidebar
-    st.sidebar.title(f"Ultimate Excel AI ({APP_MODE}) 🚀")
+    st.sidebar.markdown(f"## 📊 Excel AI ({APP_MODE})")
+    
+    # Theme Customizer
+    with st.sidebar.expander("🎨 Theme Customizer", expanded=False):
+        t_primary = st.color_picker("Primary Color", st.session_state.get('theme_primary', '#00D2FF'))
+        t_bg = st.color_picker("Background", st.session_state.get('theme_bg', '#0E1117'))
+        t_card = st.color_picker("Card Background", st.session_state.get('theme_card_bg', '#1E2127'))
+        t_text = st.color_picker("Text Color", st.session_state.get('theme_text', '#FAFAFA'))
+        
+        if st.button("Apply Theme"):
+            st.session_state['theme_primary'] = t_primary
+            st.session_state['theme_bg'] = t_bg
+            st.session_state['theme_card_bg'] = t_card
+            st.session_state['theme_text'] = t_text
+            st.rerun()
+            
+    theme_dict = {
+        "primary": st.session_state.get('theme_primary', '#00D2FF'),
+        "bg": st.session_state.get('theme_bg', '#0E1117'),
+        "card": st.session_state.get('theme_card_bg', '#1E2127'),
+        "text": st.session_state.get('theme_text', '#FAFAFA'),
+        "grid": "rgba(255,255,255,0.1)" if st.session_state.get('theme_bg', '#0E1117') < '#888888' else "rgba(0,0,0,0.1)"
+    }
+    
+    st.sidebar.divider()
+
     uploaded_file = st.sidebar.file_uploader("Upload Excel/CSV", type=['csv', 'xlsx', 'xls'])
     
     if uploaded_file:
@@ -23,115 +48,111 @@ def render_dashboard():
         if 'df' not in st.session_state or st.session_state.get('last_file') != uploaded_file.name:
             with st.spinner("Processing Data..."):
                 if APP_MODE == 'LOCAL':
-                    # LOCAL MODE
                     df, msg = data.load_data(uploaded_file, uploaded_file.name)
                     if df is not None:
                         df, num, cat, date, stats = data.process_data(df)
-                        st.session_state['df'] = df
+                        st.session_state['raw_df'] = df
                         st.session_state['num'] = num
                         st.session_state['cat'] = cat
                         st.session_state['date'] = date
                         st.session_state['clean_stats'] = stats
                         st.session_state['filename'] = uploaded_file.name
                         st.session_state['last_file'] = uploaded_file.name
-                        st.success(f"Loaded {len(df)} rows!")
+                        st.sidebar.success(f"Loaded {len(df)} rows!")
                     else:
-                        st.error(msg)
+                        st.sidebar.error(msg)
                         return
                 else:
-                    # SAAS MODE
-                    # We need to send the file to the backend
-                    # Reset pointer for upload
                     uploaded_file.seek(0)
                     resp = api.upload_file(uploaded_file, uploaded_file.name)
                     if "error" not in resp:
-                        # For SaaS, we mostly rely on backend, but for Streamlit visualization
-                        # we still need the DF locally. Ideally, backend returns JSON data,
-                        # but transferring large DFs via JSON is slow.
-                        # Hybrid approach: We process locally for Visualization, but use API for ML.
-                        # OR: We re-download the processed DF.
-                        # For simplicity in this demo: We keep local DF for charts, use API for ML triggers.
-                        
-                        # Process locally for UI responsiveness
                         uploaded_file.seek(0)
                         df, _ = data.load_data(uploaded_file, uploaded_file.name)
                         df, num, cat, date, stats = data.process_data(df)
                         
-                        st.session_state['df'] = df
+                        st.session_state['raw_df'] = df
                         st.session_state['num'] = num
                         st.session_state['cat'] = cat
                         st.session_state['date'] = date
-                        st.session_state['clean_stats'] = stats # Use local stats or backend stats
-                        st.session_state['filename'] = uploaded_file.name # Key for API calls
+                        st.session_state['clean_stats'] = stats
+                        st.session_state['filename'] = uploaded_file.name
                         st.session_state['last_file'] = uploaded_file.name
-                        st.success(f"Uploaded to Cloud! ({len(df)} rows)")
+                        st.sidebar.success(f"Uploaded to Cloud! ({len(df)} rows)")
                     else:
-                        st.error(f"Upload Failed: {resp['error']}")
+                        st.sidebar.error(f"Upload Failed: {resp['error']}")
                         return
 
-        df = st.session_state['df']
+        raw_df = st.session_state['raw_df']
         num_cols = st.session_state['num']
         cat_cols = st.session_state['cat']
         date_cols = st.session_state['date']
         filename = st.session_state.get('filename')
         
-        # Tabs
-        tabs = st.tabs(["Overview", "Predictive Analytics", "Smart Insights", "Data Chat", "Reports"])
+        # SLICERS (Filters)
+        st.sidebar.markdown("### 🎛️ Filters (Slicers)")
+        filtered_df = raw_df.copy()
         
-        # 1. Overview
+        # Dynamically create slicers for top 3 categorical columns
+        slicer_cols = cat_cols[:3] if len(cat_cols) > 0 else []
+        for col in slicer_cols:
+            unique_vals = raw_df[col].dropna().unique().tolist()
+            if len(unique_vals) < 50: # Only if manageable number of unique values
+                selected_vals = st.sidebar.multiselect(f"Filter {col}", unique_vals, default=[])
+                if selected_vals:
+                    filtered_df = filtered_df[filtered_df[col].isin(selected_vals)]
+                    
+        st.session_state['df'] = filtered_df
+        df = filtered_df
+        
+        # Tabs
+        tabs = st.tabs(["📊 Dashboard", "🔮 Predictive Analytics", "💡 Smart Insights", "💬 Data Chat", "📥 Reports"])
+        
+        # 1. Overview Dashboard (Power BI Style)
         with tabs[0]:
-            st.markdown("### 🚀 Project Overview")
-            
-            # Metric Cards
+            # KPI Cards Row
             col1, col2, col3, col4 = st.columns(4)
             with col1:
-                st.markdown(f"""
-                <div class="metric-card">
-                    <h3>Rows</h3>
-                    <h2>{len(df):,}</h2>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown(f"""<div class="metric-card"><h3>Total Rows</h3><h2>{len(df):,}</h2></div>""", unsafe_allow_html=True)
             with col2:
-                st.markdown(f"""
-                <div class="metric-card">
-                    <h3>Columns</h3>
-                    <h2>{len(df.columns)}</h2>
-                </div>
-                """, unsafe_allow_html=True)
+                primary_metric = f"Sum of {num_cols[0]}" if num_cols else "Columns"
+                primary_val = f"{df[num_cols[0]].sum():,.2f}" if num_cols else str(len(df.columns))
+                st.markdown(f"""<div class="metric-card"><h3>{primary_metric}</h3><h2>{primary_val}</h2></div>""", unsafe_allow_html=True)
             with col3:
-                st.markdown(f"""
-                <div class="metric-card">
-                    <h3>Missing Filled</h3>
-                    <h2>{st.session_state['clean_stats'].get('missing_filled', 0)}</h2>
-                </div>
-                """, unsafe_allow_html=True)
+                sec_metric = f"Avg of {num_cols[0]}" if num_cols else "Missing Filled"
+                sec_val = f"{df[num_cols[0]].mean():,.2f}" if num_cols and not df.empty else str(st.session_state['clean_stats'].get('missing_filled', 0))
+                st.markdown(f"""<div class="metric-card"><h3>{sec_metric}</h3><h2>{sec_val}</h2></div>""", unsafe_allow_html=True)
             with col4:
-                st.markdown(f"""
-                <div class="metric-card">
-                    <h3>Duplicates</h3>
-                    <h2>{st.session_state['clean_stats'].get('duplicates_removed', 0)}</h2>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown(f"""<div class="metric-card"><h3>Categories</h3><h2>{len(cat_cols)}</h2></div>""", unsafe_allow_html=True)
             
-            st.divider()
+            st.write("") # Spacer
             
-            st.markdown("### 📈 Automated Visualizations")
-            suggestions = charts.suggest_charts(df, num_cols, cat_cols, date_cols)
-            for i, conf in enumerate(suggestions[:4]):
-                if i % 2 == 0: c1, c2 = st.columns(2)
-                with (c1 if i % 2 == 0 else c2):
+            # Interactive Chart Grid
+            if len(num_cols) > 0 and len(cat_cols) > 0:
+                c1, c2 = st.columns(2)
+                with c1:
                     st.markdown('<div class="metric-card" style="padding:1rem;">', unsafe_allow_html=True)
-                    if conf['type'] == 'heatmap': st.plotly_chart(charts.generate_correlation_heatmap(df, num_cols), use_container_width=True)
-                    elif conf['type'] == 'line': st.plotly_chart(charts.generate_line_chart(df, conf['x'], conf['y']), use_container_width=True)
-                    elif conf['type'] == 'bar': st.plotly_chart(charts.generate_bar_chart(df, conf['x'], conf['y']), use_container_width=True)
-                    elif conf['type'] == 'hist': st.plotly_chart(charts.generate_distribution_chart(df, conf['x']), use_container_width=True)
+                    st.plotly_chart(charts.generate_bar_chart(df, cat_cols[0], num_cols[0], theme_dict), use_container_width=True)
                     st.markdown('</div>', unsafe_allow_html=True)
+                with c2:
+                    st.markdown('<div class="metric-card" style="padding:1rem;">', unsafe_allow_html=True)
+                    # Use donut chart if unique values are small, otherwise correlation or distribution
+                    if len(df[cat_cols[0]].unique()) <= 15:
+                        st.plotly_chart(charts.generate_donut_chart(df, cat_cols[0], num_cols[0], theme_dict), use_container_width=True)
+                    elif len(num_cols) > 1:
+                        st.plotly_chart(charts.generate_correlation_heatmap(df, num_cols, theme_dict), use_container_width=True)
+                    else:
+                        st.plotly_chart(charts.generate_distribution_chart(df, num_cols[0], theme_dict), use_container_width=True)
+                    st.markdown('</div>', unsafe_allow_html=True)
+                    
+            if len(date_cols) > 0 and len(num_cols) > 0:
+                st.markdown('<div class="metric-card" style="padding:1rem; margin-top:1rem;">', unsafe_allow_html=True)
+                st.plotly_chart(charts.generate_line_chart(df, date_cols[0], num_cols[0], theme_dict), use_container_width=True)
+                st.markdown('</div>', unsafe_allow_html=True)
 
         # 2. Predictive Analytics
         with tabs[1]:
             st.header("Predictive Analytics")
             
-            # Forecast
             if date_cols and num_cols:
                 st.subheader("Forecast")
                 d_col = st.selectbox("Date Column", date_cols)
@@ -152,51 +173,22 @@ def render_dashboard():
                             
                     if f_df is not None:
                         st.session_state['forecast_df'] = f_df
-                        st.line_chart(f_df.set_index('Date'))
+                        st.plotly_chart(charts.generate_line_chart(f_df, 'Date', f_df.columns[1], theme_dict), use_container_width=True)
                     else: st.error("Not enough data to forecast.")
             
             st.divider()
             
-            # Prediction
-            st.subheader("AutoML Model")
-            target = st.selectbox("Select Target Variable", df.columns)
-            if st.button("Train Model"):
-                if APP_MODE == 'LOCAL':
-                    engine = ml.MachineLearningEngine()
-                    model, metrics = engine.train_predictor(df, target)
-                else:
-                    resp = api.predict(filename, target)
-                    if "error" not in resp:
-                        metrics = resp['metrics']
-                    else:
-                        st.error(resp['error'])
-                        metrics = None
-
-                if metrics:
-                    st.session_state['model_metrics'] = metrics
-                    st.success(f"Trained {metrics.get('type')} Model")
-                    st.write(metrics)
-            
             # Anomaly
-            st.divider()
             st.subheader("Anomaly Detection")
             if st.button("Detect Anomalies"):
                 if APP_MODE == 'LOCAL':
                     engine = ml.MachineLearningEngine()
                     df_anom = engine.detect_anomalies(df.copy(), num_cols)
-                    anom_count = df_anom['Is_Anomaly'].sum()
                     anoms = df_anom
                 else:
                     resp = api.detect_anomalies(filename)
                     if "error" not in resp:
-                        anom_count = resp['anomaly_count']
-                        # Reconstruct anomaly DF locally for plotting (visual only)
-                        # In real app we might fetch full DF, here we just visualize what we have
-                        # using local logic for plot, but show API count
-                        anoms = df.copy() # Placeholder for full plotting if not fetching all
-                        st.info("API Verification: Backend detected same anomalies.")
-                        
-                        # Visualize locally
+                        anoms = df.copy() 
                         engine = ml.MachineLearningEngine()
                         anoms = engine.detect_anomalies(df.copy(), num_cols)
                     else:
@@ -207,11 +199,11 @@ def render_dashboard():
                     st.session_state['anomaly_df'] = anoms
                     st.write(f"Detected {anoms['Is_Anomaly'].sum()} anomalies.")
                     if len(num_cols) >= 2:
-                        st.plotly_chart(charts.generate_scatter_chart(anoms, num_cols[0], num_cols[1], 'Is_Anomaly'), use_container_width=True)
+                        st.plotly_chart(charts.generate_scatter_chart(anoms, num_cols[0], num_cols[1], 'Is_Anomaly', theme_dict), use_container_width=True)
 
         # 3. Smart Insights
         with tabs[2]:
-            st.markdown("### 💡 Smart Insights")
+            st.markdown("### 💡 AI Data Insights")
             if APP_MODE == 'LOCAL':
                 insights = analysis.generate_insights(df, num_cols, date_cols)
             else:
@@ -225,29 +217,28 @@ def render_dashboard():
                 </div>
                 """, unsafe_allow_html=True)
 
-
         # 4. Data Chat
         with tabs[3]:
-            st.header("Data Chat")
-            q = st.text_input("Ask a question about your data...")
+            st.header("Chat with Data")
+            q = st.text_input("Ask a question (e.g. 'trend of sales' or 'distribution of profit')...")
             if q:
                 req = nlu.parse_query(q, num_cols, cat_cols, date_cols)
                 if req:
                     st.success(f"Action: {req.action}, Chart: {req.chart_type}, Cols: {req.target_cols}")
                     if req.action == 'plot':
-                        if req.chart_type == 'line': st.plotly_chart(charts.generate_line_chart(df, req.target_cols[1], req.target_cols[0]), use_container_width=True)
-                        elif req.chart_type == 'bar': st.plotly_chart(charts.generate_bar_chart(df, req.target_cols[0], req.target_cols[1]), use_container_width=True)
-                        elif req.chart_type == 'hist': st.plotly_chart(charts.generate_distribution_chart(df, req.target_cols[0]), use_container_width=True)
-                        elif req.chart_type == 'heatmap': st.plotly_chart(charts.generate_correlation_heatmap(df, num_cols), use_container_width=True)
-                else: st.warning("I didn't understand the query. Try asking for 'trend of sales' or 'distribution of profit'.")
+                        if req.chart_type == 'line': st.plotly_chart(charts.generate_line_chart(df, req.target_cols[1], req.target_cols[0], theme_dict), use_container_width=True)
+                        elif req.chart_type == 'bar': st.plotly_chart(charts.generate_bar_chart(df, req.target_cols[0], req.target_cols[1], theme_dict), use_container_width=True)
+                        elif req.chart_type == 'hist': st.plotly_chart(charts.generate_distribution_chart(df, req.target_cols[0], theme_dict), use_container_width=True)
+                        elif req.chart_type == 'heatmap': st.plotly_chart(charts.generate_correlation_heatmap(df, num_cols, theme_dict), use_container_width=True)
+                else: st.warning("I didn't understand the query.")
 
         # 5. Reports
         with tabs[4]:
-            st.header("Download Reports")
+            st.header("Export Reports")
             from ultimate_excel_ai.logic import pivots
             
             pivot_data = pivots.generate_pivot_tables(df, num_cols, cat_cols, date_cols)
-            insights = analysis.generate_insights(df, num_cols, date_cols) # Regenerate for fresh report
+            insights = analysis.generate_insights(df, num_cols, date_cols)
             
             excel_data = export.generate_excel_report(
                 df, pivot_data, 
@@ -257,6 +248,12 @@ def render_dashboard():
                 insights
             )
             
-            st.download_button("📥 Download Excel Report", excel_data, "report.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            st.download_button("📥 Download Excel Report", excel_data, "power_bi_report.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     else:
-        st.info("Please upload a file to begin.")
+        st.markdown(f"""
+        <div style="text-align:center; padding: 5rem 0;">
+            <h1 style="color:{theme_dict['primary']} !important; font-size:4rem;">📊</h1>
+            <h2>Welcome to Ultimate Excel AI</h2>
+            <p style="opacity:0.7">Upload your Excel or CSV file in the sidebar to generate a stunning Power BI style dashboard instantly.</p>
+        </div>
+        """, unsafe_allow_html=True)
